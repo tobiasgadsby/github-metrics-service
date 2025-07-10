@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.lbg.ecp.lse</groupId>
+        <artifactId>ecp-lse-parent-spring-boot</artifactId>
+        <version>1.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>github-metrics-svc</artifactId>
+    <version>1.0.1</version>
+    <name>github-metrics-svc</name>
+    <packaging>jar</packaging>
+
+    <description>Service to provide information on state of selected github repos</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.lbg.ecp</groupId>
+            <artifactId>ecp-starter-http-service</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.lbg.ecp</groupId>
+            <artifactId>ecp-starter-rest-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.lbg.ecp</groupId>
+            <artifactId>ecp-starter-spring-data</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver-dns-native-macos</artifactId>
+            <scope>runtime</scope>
+            <classifier>osx-x86_64</classifier>
+            <version>4.2.0.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+    </dependencies>
+    <build>
+    </build>
+</project>

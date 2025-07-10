@@ -1,0 +1,32 @@
+server:
+  port: 2126
+
+spring:
+  datasource:
+    url: ${POSTGRES_URL}
+    username: ${POSTGRES_USERNAME}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+
+
+#Env Values Start Here
+env:
+  tenant-code: ${TENANT}
+  github:
+    auth-token: ${GITHUB_AUTH_TOKEN}
+  prefix: ${PREFIX}
+  watch-prefix-repos: ${WATCH_PREFIX_REPOS}
+  add-by-prefix: ${ADD_BY_PREFIX}
+#Env Values End Here
+#logging:
+#  level:
+#    org:
+#      hibernate: DEBUG
+#      springframework:
+#        web: DEBUG
