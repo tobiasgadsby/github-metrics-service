@@ -45,7 +45,7 @@ public class HealthCheckService {
   private static Optional<Comment> calculateStaleness(PullRequest pullRequest) {
     // TODO remove hardcoded values
     long daysOld = calculateDaysOld(pullRequest.getCreatedAt());
-    if (daysOld > 14) {
+    if (daysOld > -1) {
       return Optional.of(new Comment(true, daysOld + " days since creation", "", CommentType.STALE));
     }
     return Optional.empty();
@@ -82,11 +82,17 @@ public class HealthCheckService {
   public Health getHealth(PullRequest pullRequest) {
     ArrayList<com.lbg.ecp.entities.tables.Comment> comments = new ArrayList<>();
     calculateStaleness(pullRequest).ifPresent(comments::add);
+    com.lbg.ecp.entities.tables.Health health = new com.lbg.ecp.entities.tables.Health();
     // TODO Remove hardcoded values
-    double healthQuality =
-        comments.isEmpty()
-            ? 1.0
-            : 1.0 - (comments.stream().filter(Comment::getIsNegative).count()) * 0.1;
-    return new Health(healthQuality, comments);
+    health.setHealthQuality(
+            comments.isEmpty()
+                    ? 1.0
+                    : 1.0
+                    - (comments.stream()
+                    .filter(com.lbg.ecp.entities.tables.Comment::getIsNegative)
+                    .count()
+                    * 0.1));
+    health.setComments(comments);
+    return health;
   }
 }

@@ -20,7 +20,7 @@ env:
   tenant-code: ${TENANT}
   github:
     auth-token: ${GITHUB_AUTH_TOKEN}
-  prefix: ${PREFIX}
+  prefix: ${PREFIX:#{null}}
   watch-prefix-repos: ${WATCH_PREFIX_REPOS}
   add-by-prefix: ${ADD_BY_PREFIX}
 #Env Values End Here
