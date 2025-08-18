@@ -15,6 +15,8 @@ public class RepositoryComponent {
 
   private String name;
 
+  private Long componentId;
+
   private Health health;
 
   private ComponentType componentType;

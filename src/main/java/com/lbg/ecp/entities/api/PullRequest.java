@@ -10,6 +10,8 @@ public class PullRequest {
 
   private String title;
 
+  private Integer number;
+
   @JsonProperty("created_at")
   private String createdAt;
 }

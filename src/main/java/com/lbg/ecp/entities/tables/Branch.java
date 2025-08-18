@@ -27,11 +27,11 @@ public class Branch {
 
   @ManyToOne() private Repository repository;
 
-  @OneToOne(mappedBy = "branch", cascade = CascadeType.MERGE)
+  @OneToOne(mappedBy = "branch", cascade = CascadeType.ALL, orphanRemoval = true)
   @JsonIgnore
   private Commit latestCommit;
 
-  @OneToOne(cascade = CascadeType.ALL)
+  @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
   @JsonIgnore
   private Health health;
 

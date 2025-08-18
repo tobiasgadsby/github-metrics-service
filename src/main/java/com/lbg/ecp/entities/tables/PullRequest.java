@@ -33,6 +33,9 @@ public class PullRequest {
   @Column(nullable = false)
   private Timestamp createdAt;
 
+  @Column(nullable = false)
+  private Integer number;
+
   @ManyToOne() private Repository repository;
 
   @OneToOne(cascade = CascadeType.ALL)
@@ -41,11 +44,11 @@ public class PullRequest {
 
   public PullRequest() {}
 
-  public PullRequest(String url, Repository repository, String title, Timestamp createdAt) {
+  public PullRequest(String url, Repository repository, String title, Timestamp createdAt, Integer number) {
     this.url = url;
     this.repository = repository;
     this.title = title;
     this.createdAt = createdAt;
-    this.health = health;
+    this.number = number;
   }
 }

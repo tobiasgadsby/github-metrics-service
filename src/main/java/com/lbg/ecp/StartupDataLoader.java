@@ -36,13 +36,13 @@ public class StartupDataLoader implements ApplicationRunner {
   @Value("${env.tenant-code}")
   private String tenantCode;
 
-  @Value("${env.add-by-prefix}")
+  @Value("${env.add-by-prefix:false}")
   private boolean addByPrefix;
 
-  @Value("${env.prefix}")
+  @Value("${env.prefix:}")
   private String prefix;
 
-  @Value("${env.watch-prefix-repos}")
+  @Value("${env.watch-prefix-repos:false}")
   private boolean watchPrefixRepos;
 
   @Autowired
@@ -81,7 +81,7 @@ public class StartupDataLoader implements ApplicationRunner {
       LOG.info("REPOSITORIES BY SEARCH");
       // get all repositories based on prefix.
       final List<com.lbg.ecp.entities.api.Repository> repositorySearchResults =
-          githubApi.getRepositoriesBySearch(prefix);
+          githubApi.getAuthenticatedUsersRepositories();
 
       repositorySearchResults.forEach(
           searchRepository -> {

@@ -71,29 +71,46 @@ public class DataLoadService {
     }
     return pullRequests.stream()
             .mapToDouble(
-                pullRequest -> {
-                  Optional<com.lbg.ecp.entities.tables.PullRequest> existingPullRequest =
-                      pullRequestRepo.findPullRequestByUrl(pullRequest.getUrl());
+                    pullRequest -> {
+                        return pullRequestRepo.findPullRequestByUrl(pullRequest.getUrl()).map(
+                                existingPullRequest -> {
+                                    Health health = healthCheckService.getHealth(existingPullRequest);
+                                    existingPullRequest.getHealth().setHealthQuality(
+                                            health.getHealthQuality()
+                                    );
+                                    existingPullRequest.getHealth().getComments().forEach(
+                                            comment -> comment.setHealth(existingPullRequest.getHealth())
+                                    );
+                                    existingPullRequest.getHealth().setComments(
+                                            health.getComments()
+                                    );
+                                    pullRequestRepo.save(existingPullRequest);
+                                    return health.getHealthQuality();
+                                }
+                        ).orElseGet(
+                                () -> {
+                                    com.lbg.ecp.entities.tables.PullRequest newPullRequest = new com.lbg.ecp.entities.tables.PullRequest(
+                                            pullRequest.getUrl(),
+                                            repository,
+                                            pullRequest.getTitle(),
+                                            Timestamp.valueOf(
+                                                    LocalDateTime.parse(
+                                                            pullRequest.getCreatedAt(),
+                                                            DateTimeFormatter.ISO_DATE_TIME)),
+                                            pullRequest.getNumber()
+                                    );
+                                    Health health = healthCheckService.getHealth(newPullRequest);
+                                    health.getComments().forEach(
+                                            comment -> comment.setHealth(health)
+                                    );
+                                    newPullRequest.setHealth(health);
+                                    pullRequestRepo.save(newPullRequest);
+                                    return health.getHealthQuality();
+                                }
+                        );
+                    }
+            ).sum() / pullRequests.size();
 
-                  // TODO update to update repository information, e.g review status.
-                  if (existingPullRequest.isEmpty()) {
-                    com.lbg.ecp.entities.tables.PullRequest newPullRequest =
-                         new com.lbg.ecp.entities.tables.PullRequest(
-                            pullRequest.getUrl(),
-                            repository,
-                            pullRequest.getTitle(),
-                            Timestamp.valueOf(
-                                LocalDateTime.parse(
-                                    pullRequest.getCreatedAt(), DateTimeFormatter.ISO_DATE_TIME)));
-                    Health newHealth = healthCheckService.getHealth(newPullRequest);
-                    newPullRequest.setHealth(newHealth);
-                    pullRequestRepo.save(newPullRequest);
-                    return healthCheckService.getHealth(newPullRequest).getHealthQuality();
-                  }
-                  return healthCheckService.getHealth(existingPullRequest.get()).getHealthQuality();
-                })
-            .sum()
-        / pullRequests.size();
   }
 
   private Double updateBranches(Repository repository) {
