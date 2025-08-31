@@ -2,10 +2,8 @@ package com.lbg.ecp.api;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lbg.ecp.entities.api.Branch;
-import com.lbg.ecp.entities.api.GitCommit;
-import com.lbg.ecp.entities.api.PullRequest;
-import com.lbg.ecp.entities.api.Repository;
+import com.lbg.ecp.entities.api.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -87,6 +86,17 @@ public class GithubApi {
     return repositories;
   }
 
+  public PullRequest getPullRequest(String owner, String repo, String pull_number) {
+    return objectMapper.convertValue(
+            restClient
+                    .get()
+                    .uri("/repos/{owner}/{repo}/pulls/{pull_number}",owner ,repo, pull_number)
+                    .retrieve()
+                    .body(Map.class),
+            PullRequest.class
+    );
+  }
+
   public GitCommit getCommitDetails(String repoOwner, String repoName, String commitSha) {
     return restClient
         .get()
@@ -123,4 +133,47 @@ public class GithubApi {
     }
 
   }
+
+  public OpenPullRequestResponse openPullRequest(String owner, String repo, String title, String branchToMerge, String branchToMergeInto, String body) {
+    logger.info("Open pull request for repo: {} for branch: {}", repo, branchToMerge);
+    OpenPullRequestRequest openPullRequestRequest = new OpenPullRequestRequest()
+            .setTitle(title)
+            .setHead(branchToMerge)
+            .setBase(branchToMergeInto)
+            .setBody(body);
+    OpenPullRequestResponse openPullRequestResponse = null;
+    try {
+      // --- TEMPORARY DEBUGGING CODE ---
+      // Use .toEntity() to capture the full response: status, headers, and body as a String
+      ResponseEntity<String> responseEntity = restClient
+              .post()
+              .uri("/repos/{owner}/{repo}/pulls", owner, repo)
+              .body(openPullRequestRequest)
+              .retrieve()
+              .toEntity(String.class); // Retrieve the body as a String
+
+      // Log everything about the response
+      logger.info("GitHub API Response Status: {}", responseEntity.getStatusCode());
+      logger.info("GitHub API Response Headers: {}", responseEntity.getHeaders());
+      logger.info("GitHub API Response Body: {}", responseEntity.getBody());
+
+      ObjectMapper objectMapper = new ObjectMapper();
+      openPullRequestResponse = objectMapper.readValue(responseEntity.getBody(), OpenPullRequestResponse.class);
+
+      // Now, check the response before proceeding
+      if (responseEntity.getStatusCode().is2xxSuccessful() && responseEntity.hasBody()) {
+        // If everything looks good in the logs, you can try to manually deserialize it
+        // For now, let's just return null to isolate the logging step.
+        // In a real fix, you would parse the logged body.
+        // For example: new ObjectMapper().readValue(responseEntity.getBody(), OpenPullRequestResponse.class);
+      }
+
+      // The method will currently still return null, but your logs will now contain the truth.
+
+    } catch (Exception e) {
+      logger.error("AN ERROR OCCURRED: ", e);
+    }
+    return openPullRequestResponse; // Return null while debugging to see the logs clearly
+  }
+
 }

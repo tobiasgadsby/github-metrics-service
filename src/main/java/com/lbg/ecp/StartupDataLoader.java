@@ -65,15 +65,18 @@ public class StartupDataLoader implements ApplicationRunner {
   @Override
   public void run(ApplicationArguments args) {
 
-    //CLEANUP
-    commentRepository.deleteAllInBatch();
+    executeFullRefresh();
+
+  }
+
+  public void executeFullRefresh() {
 
     // Get tenant based on tenant code, or created a new tenant entity and save to DB if not
     // present.
     Tenant tenant =
-        tenantRepo
-            .findByTenantCode(tenantCode)
-            .orElseGet(() -> tenantRepo.save(new Tenant(tenantCode)));
+            tenantRepo
+                    .findByTenantCode(tenantCode)
+                    .orElseGet(() -> tenantRepo.save(new Tenant(tenantCode)));
 
     // If addbyprefix option is selected, service will query for all repositories based on set
     // prefix.
@@ -81,37 +84,38 @@ public class StartupDataLoader implements ApplicationRunner {
       LOG.info("REPOSITORIES BY SEARCH");
       // get all repositories based on prefix.
       final List<com.lbg.ecp.entities.api.Repository> repositorySearchResults =
-          githubApi.getAuthenticatedUsersRepositories();
+              githubApi.getAuthenticatedUsersRepositories();
 
       repositorySearchResults.forEach(
-          searchRepository -> {
-            // check if already present in the database, if not create a new repository entity.
-            final Repository repository =
-                repositoryRepo
-                    .findRepositoryByFullName(searchRepository.getFullName())
-                    .orElseGet(
-                        () ->
-                            repositoryRepo.save(
-                                new Repository(
-                                    searchRepository.getName(),
-                                    searchRepository.getOwner().getLogin(),
-                                    searchRepository.getFullName(),
-                                    new Health(1.0))));
+              searchRepository -> {
+                // check if already present in the database, if not create a new repository entity.
+                final Repository repository =
+                        repositoryRepo
+                                .findRepositoryByFullName(searchRepository.getFullName())
+                                .orElseGet(
+                                        () ->
+                                                repositoryRepo.save(
+                                                        new Repository(
+                                                                searchRepository.getName(),
+                                                                searchRepository.getOwner().getLogin(),
+                                                                searchRepository.getFullName(),
+                                                                new Health(1.0))));
 
-            // If the setting is enabled to add searched repos to the watchlist.
-            // check if already present in the database, if not create a new watched repository
-            // entity.
-            if (watchPrefixRepos
-                && !watchedRepositoryRepo.existsByTenantAndRepository(tenant, repository)) {
-              watchedRepositoryRepo.save(new WatchedRepository(tenant, repository));
-            }
-          });
+                // If the setting is enabled to add searched repos to the watchlist.
+                // check if already present in the database, if not create a new watched repository
+                // entity.
+                if (watchPrefixRepos
+                        && !watchedRepositoryRepo.existsByTenantAndRepository(tenant, repository)) {
+                  watchedRepositoryRepo.save(new WatchedRepository(tenant, repository));
+                }
+              });
     }
 
     List<WatchedRepository> watchedRepositories = watchedRepositoryRepo.findByTenant(tenant);
     watchedRepositories.forEach(
-        watchedRepository ->
-            dataLoadService.updateRepositoryData(
-                repositoryRepo.findById(watchedRepository.getId()).get()));
+            watchedRepository ->
+                    dataLoadService.updateRepositoryData(
+                            repositoryRepo.findById(watchedRepository.getId()).get()));
+
   }
 }

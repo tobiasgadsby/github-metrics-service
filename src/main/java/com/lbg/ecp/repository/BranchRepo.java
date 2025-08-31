@@ -15,4 +15,6 @@ public interface BranchRepo extends JpaRepository<Branch, Long> {
   List<Branch> findByRepository(Repository repository);
 
   List<Branch> findBranchesByRepository_Id(Long repositoryId);
+
+  Optional<Branch> findBramchById(Long id);
 }

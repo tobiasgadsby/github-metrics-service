@@ -1,16 +1,11 @@
 package com.lbg.ecp.entities.tables;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
 import java.sql.Timestamp;
+import java.util.List;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -34,7 +29,7 @@ public class PullRequest {
   private Timestamp createdAt;
 
   @Column(nullable = false)
-  private Integer number;
+  private String number;
 
   @ManyToOne() private Repository repository;
 
@@ -42,9 +37,12 @@ public class PullRequest {
   @JsonIgnore
   private Health health;
 
+  @OneToMany(mappedBy = "pullRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<PullRequestLabel> pullRequestLabels;
+
   public PullRequest() {}
 
-  public PullRequest(String url, Repository repository, String title, Timestamp createdAt, Integer number) {
+  public PullRequest(String url, Repository repository, String title, Timestamp createdAt, String number) {
     this.url = url;
     this.repository = repository;
     this.title = title;

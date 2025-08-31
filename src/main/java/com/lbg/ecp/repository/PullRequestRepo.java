@@ -10,4 +10,6 @@ public interface PullRequestRepo extends JpaRepository<PullRequest, Long> {
   Optional<PullRequest> findPullRequestByUrl(String url);
 
   List<PullRequest> findPullRequestsByRepositoryId(Long id);
+
+  List<PullRequest> findPullRequestById(Long id);
 }

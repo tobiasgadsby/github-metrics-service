@@ -2,10 +2,13 @@ package com.lbg.ecp.entities.frontend;
 
 import com.lbg.ecp.entities.frontend.components.ComponentType;
 import com.lbg.ecp.entities.frontend.components.Health;
+import com.lbg.ecp.entities.frontend.components.Label;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+
+import java.util.List;
 
 @Data
 @Accessors(chain = true)
@@ -20,6 +23,8 @@ public class RepositoryComponent {
   private Health health;
 
   private ComponentType componentType;
+
+  private List<Label> labels;
 
   public RepositoryComponent() {
 
