@@ -4,12 +4,11 @@ import com.lbg.ecp.api.GithubApi;
 import com.lbg.ecp.entities.api.Branch;
 import com.lbg.ecp.entities.api.GitCommit;
 import com.lbg.ecp.entities.api.PullRequest;
-import com.lbg.ecp.entities.tables.Commit;
-import com.lbg.ecp.entities.tables.Health;
-import com.lbg.ecp.entities.tables.PullRequestLabel;
-import com.lbg.ecp.entities.tables.Repository;
-import com.lbg.ecp.repository.*;
-import jakarta.transaction.Transactional;
+import com.lbg.ecp.entities.tables.*;
+import com.lbg.ecp.repository.BranchRepo;
+import com.lbg.ecp.repository.CommitRepo;
+import com.lbg.ecp.repository.PullRequestRepo;
+import com.lbg.ecp.repository.RepositoryRepo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,8 +37,7 @@ public class DataLoadService {
             CommitRepo commitRepo,
             RepositoryRepo repositoryRepo,
             PullRequestRepo pullRequestRepo,
-            HealthCheckService healthCheckService,
-            HealthRepo healthRepo) {
+            HealthCheckService healthCheckService) {
         this.branchRepo = branchRepo;
         this.commitRepo = commitRepo;
         this.githubApi = githubApi;
@@ -48,164 +46,165 @@ public class DataLoadService {
         this.healthCheckService = healthCheckService;
     }
 
-    @Transactional
-    public void updateRepositoryData(Repository repository) {
-
-        // TODO Add error check
-
-        Double branchHealthQuality = updateBranches(repository);
-        Double pullRequestHealthQuality = updatePullRequests(repository);
-
-        repository.getHealth().setHealthQuality((branchHealthQuality + pullRequestHealthQuality) / 2);
-        repositoryRepo.save(repository);
-    }
-
-    private Double updatePullRequests(Repository repository) {
-        List<PullRequest> pullRequests =
-                githubApi.getPullRequests(repository.getOwner(), repository.getName());
-        if (pullRequests.isEmpty()) {
-            return 1.0;
-        }
-        return pullRequests.stream()
-                .mapToDouble(
-                        pullRequest -> {
-                            return pullRequestRepo.findPullRequestByUrl(pullRequest.getUrl()).map(
-                                    existingPullRequest -> {
-                                        //UPDATE BASE INFO
-                                        PullRequest pullRequestChanges = githubApi.getPullRequest(repository.getOwner(), repository.getName(), pullRequest.getNumber());
-                                        existingPullRequest.setTitle(pullRequestChanges.getTitle());
-
-                                        //UPDATE HEALTH
-                                        Health health = healthCheckService.getHealth(existingPullRequest);
-                                        existingPullRequest.getHealth().setHealthQuality(
-                                                health.getHealthQuality()
-                                        );
-                                        existingPullRequest.getHealth().getComments().forEach(
-                                                comment -> comment.setHealth(existingPullRequest.getHealth())
-                                        );
-                                        existingPullRequest.getHealth().setComments(
-                                                health.getComments()
-                                        );
-
-                                        //UPDATE LABELS
-                                        existingPullRequest.getPullRequestLabels().clear();
-                                        existingPullRequest.getPullRequestLabels().addAll(
-                                                pullRequestChanges.getLabels().stream().map(
-                                                        label -> new PullRequestLabel(
-                                                                label.getName(),
-                                                                label.getDescription(),
-                                                                existingPullRequest,
-                                                                label.getColor()
-                                                        )
-                                                ).toList()
-                                        );
-                                        pullRequestRepo.save(existingPullRequest);
-                                        return health.getHealthQuality();
-                                    }
-                            ).orElseGet(
-                                    () -> {
-                                        com.lbg.ecp.entities.tables.PullRequest newPullRequest = new com.lbg.ecp.entities.tables.PullRequest(
-                                                pullRequest.getUrl(),
-                                                repository,
-                                                pullRequest.getTitle(),
-                                                Timestamp.valueOf(
-                                                        LocalDateTime.parse(
-                                                                pullRequest.getCreatedAt(),
-                                                                DateTimeFormatter.ISO_DATE_TIME)),
-                                                pullRequest.getNumber()
-                                        );
-                                        Health health = healthCheckService.getHealth(newPullRequest);
-                                        health.getComments().forEach(
-                                                comment -> comment.setHealth(health)
-                                        );
-                                        newPullRequest.setHealth(health);
-                                        pullRequestRepo.save(newPullRequest);
-                                        return health.getHealthQuality();
-                                    }
-                            );
+    public Repository updateRepositoryBaseDetails(com.lbg.ecp.entities.api.Repository repository) {
+        // check if already present in the database, if present then update the entity with any changed details, if not create a new repository entity.
+        return repositoryRepo
+                .findRepositoryByFullName(repository.getFullName())
+                .map(
+                        existingRepository -> {
+                            existingRepository.setName(repository.getName());
+                            existingRepository.setOwner(repository.getOwner().getLogin());
+                            existingRepository.setFullName(repository.getFullName());
+                            repositoryRepo.save(existingRepository);
+                            return existingRepository;
                         }
-                ).sum() / pullRequests.size();
-
+                )
+                .orElseGet(
+                        () ->
+                                repositoryRepo.save(Repository.builder()
+                                        .name(repository.getFullName())
+                                        .owner(repository.getOwner().getLogin())
+                                        .fullName(repository.getFullName())
+                                        .build()));
     }
 
-    private Double updateBranches(Repository repository) {
-        List<Branch> branches = githubApi.getBranches(repository.getOwner(), repository.getName());
-        if (branches.isEmpty()) {
-            return 1.0;
-        }
-        return branches.stream()
-                .mapToDouble(
-                        branch -> {
-                            log.info("BRANCH: {}", branch);
+    private Health updateHealth(Health health, Health newHealth) {
+        return Health.builder()
+                .healthQuality(newHealth.getHealthQuality())
+                .comments(newHealth.getComments().stream().map(
+                        comment -> Comment.builder()
+                                .health(health)
+                                .isNegative(comment.getIsNegative())
+                                .commentType(comment.getCommentType())
+                                .details(comment.getDetails())
+                                .solution(comment.getSolution())
+                                .build()
+                ).toList())
+                .build();
+    }
 
-                            Branch.Commit latestGitCommitFromBranch =
-                                    githubApi
-                                            .getBranch(repository.getOwner(), repository.getName(), branch.getName())
-                                            .getCommit();
+    public com.lbg.ecp.entities.tables.PullRequest updatePullRequest(Repository repository, PullRequest pullRequest) {
+        return pullRequestRepo.findPullRequestByUrl(pullRequest.getUrl()).map(
+                existingPullRequest -> {
 
-                            GitCommit commitDetails =
-                                    githubApi.getCommitDetails(
-                                            repository.getOwner(),
-                                            repository.getName(),
-                                            latestGitCommitFromBranch.getSha());
+                    //UPDATE BASE INFO
+                    existingPullRequest.setTitle(pullRequest.getTitle());
+                    existingPullRequest.setNumber(pullRequest.getNumber());
 
-                            return branchRepo
-                                    .findBranchByRepositoryAndBranchName(repository, branch.getName())
-                                    .map(
-                                            existingBranch -> {
-                                                Commit commit = existingBranch.getLatestCommit();
-                                                if (commit != null) {
-                                                    commit.setCommitSha(latestGitCommitFromBranch.getSha());
-                                                    commit.setCommitDate(
-                                                            Timestamp.valueOf(
-                                                                    LocalDateTime.parse(
-                                                                            commitDetails.getCommit().getAuthor().getDate(),
-                                                                            DateTimeFormatter.ISO_DATE_TIME)));
-                                                    existingBranch.setLatestCommit(commit);
-                                                    Health health =
-                                                            healthCheckService.getHealth(
-                                                                    existingBranch.getBranchName(), commitDetails);
-                                                    health.getComments().forEach(
-                                                            comment -> comment.setHealth(existingBranch.getHealth())
-                                                    );
-                                                    existingBranch.getHealth().setComments(health.getComments());
-                                                    existingBranch
-                                                            .getHealth()
-                                                            .setHealthQuality(health.getHealthQuality());
-                                                    branchRepo.save(existingBranch);
-                                                    return health.getHealthQuality();
-                                                }
-                                                return 0.0;
-                                            })
-                                    .orElseGet(
-                                            () -> {
-                                                var newBranch =
-                                                        new com.lbg.ecp.entities.tables.Branch(
-                                                                repository, branch.getName(), new Health(1.0));
-                                                branchRepo.save(newBranch);
+                    //UPDATE HEALTH
+                    Health updatedHealth = healthCheckService.calculateHealth(existingPullRequest);
+                    existingPullRequest.setHealth(updatedHealth);
 
-                                                var newCommit =
-                                                        new Commit(
-                                                                latestGitCommitFromBranch.getSha(),
-                                                                newBranch,
-                                                                Timestamp.valueOf(
-                                                                        LocalDateTime.parse(
-                                                                                commitDetails.getCommit().getAuthor().getDate(),
-                                                                                DateTimeFormatter.ISO_DATE_TIME)));
-                                                commitRepo.save(newCommit);
+                    //UPDATE LABELS
+                    existingPullRequest.getPullRequestLabels().clear();
+                    existingPullRequest.getPullRequestLabels().addAll(
+                            pullRequest.getLabels().stream().map(
+                                    label -> PullRequestLabel.builder()
+                                            .name(label.getName())
+                                            .description(label.getDescription())
+                                            .color(label.getColor())
+                                            .pullRequest(existingPullRequest)
+                                            .build()
+                            ).toList()
+                    );
 
-                                                Health newHealth =
-                                                        healthCheckService.getHealth(
-                                                                newBranch.getBranchName(), commitDetails);
-                                                newHealth.getComments().forEach(
-                                                        comment -> comment.setHealth(newHealth)
-                                                );
-                                                newBranch.setHealth(newHealth);
-                                                branchRepo.save(newBranch);
-                                                return newHealth.getHealthQuality();
-                                            });
+                    //Save the updated pull request (and its related health, comment, and label entities)
+                    pullRequestRepo.save(existingPullRequest);
+                    return existingPullRequest;
+                }).orElseGet( () -> {
+
+                    //Create new Pull Request.
+                    com.lbg.ecp.entities.tables.PullRequest newPullRequest = com.lbg.ecp.entities.tables.PullRequest.builder()
+                            .url(pullRequest.getUrl())
+                            .title(pullRequest.getTitle())
+                            .createdAt(new Timestamp(System.currentTimeMillis()))
+                            .number(pullRequest.getNumber())
+                            .repository(repository)
+                            .build();
+
+                    //Create new health and add to repository.
+                    Health updatedHealth = healthCheckService.calculateHealth(newPullRequest);
+                    newPullRequest.setHealth(updateHealth(newPullRequest.getHealth(), updatedHealth));
+
+                    //Save repository
+                    pullRequestRepo.save(newPullRequest);
+                    return newPullRequest;
+                }
+        );
+    }
+
+    public com.lbg.ecp.entities.tables.Branch updateBranch(Repository repository, Branch branch) {
+
+        Branch.Commit latestGitCommitFromBranch =
+                githubApi
+                        .getBranch(repository.getOwner(), repository.getName(), branch.getName())
+                        .getCommit();
+
+        GitCommit commitDetails =
+                githubApi.getCommitDetails(
+                        repository.getOwner(),
+                        repository.getName(),
+                        latestGitCommitFromBranch.getSha());
+
+        return branchRepo
+                .findBranchByRepositoryAndBranchName(repository, branch.getName())
+                .map(
+                        existingBranch -> {
+
+                            existingBranch.setBranchName(branch.getName());
+
+                            //TODO: RESUME HERE
+                            Commit commit = existingBranch.getLatestCommit();
+                            if (commit != null) {
+                                commit.setCommitSha(latestGitCommitFromBranch.getSha());
+                                commit.setCommitDate(
+                                        Timestamp.valueOf(
+                                                LocalDateTime.parse(
+                                                        commitDetails.getCommit().getAuthor().getDate(),
+                                                        DateTimeFormatter.ISO_DATE_TIME)));
+                                existingBranch.setLatestCommit(commit);
+                                Health health =
+                                        healthCheckService.calculateHealth(
+                                                existingBranch.getBranchName(), commitDetails);
+                                health.getComments().forEach(
+                                        comment -> comment.setHealth(existingBranch.getHealth())
+                                );
+                                existingBranch.getHealth().setComments(health.getComments());
+                                existingBranch
+                                        .getHealth()
+                                        .setHealthQuality(health.getHealthQuality());
+                                branchRepo.save(existingBranch);
+                            }
+                            return existingBranch;
                         })
-                .sum()
-                / branches.size();
+                .orElseGet(
+                        () -> {
+                            var newBranch =
+                                    new com.lbg.ecp.entities.tables.Branch()
+                                            .setRepository(repository)
+                                            .setBranchName(branch.getName())
+                                            .setHealth(new Health().setHealthQuality(1.0));
+                            branchRepo.save(newBranch);
+
+                            var newCommit =
+                                    new Commit(
+                                            latestGitCommitFromBranch.getSha(),
+                                            newBranch,
+                                            Timestamp.valueOf(
+                                                    LocalDateTime.parse(
+                                                            commitDetails.getCommit().getAuthor().getDate(),
+                                                            DateTimeFormatter.ISO_DATE_TIME)));
+                            commitRepo.save(newCommit);
+
+                            Health newHealth =
+                                    healthCheckService.calculateHealth(
+                                            newBranch.getBranchName(), commitDetails);
+                            newHealth.getComments().forEach(
+                                    comment -> comment.setHealth(newHealth)
+                            );
+                            newBranch.setHealth(newHealth);
+                            branchRepo.save(newBranch);
+                            return newBranch;
+                        });
     }
 }

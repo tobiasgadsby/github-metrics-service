@@ -11,15 +11,17 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
+import lombok.*;
+import lombok.experimental.Accessors;
+
 @Entity
-@Setter
+@Data
+@Table(name = "health")
+@Accessors(chain = true)
+@Builder
 @NoArgsConstructor
-@Table(name = "Health")
+@AllArgsConstructor
 public class Health {
 
   @Id

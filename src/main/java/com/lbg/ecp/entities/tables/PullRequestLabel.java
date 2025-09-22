@@ -1,12 +1,16 @@
 package com.lbg.ecp.entities.tables;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.Accessors;
 
 @Entity
-@Getter
-@Setter
+@Data
+@Table(name = "pull_request_labels")
+@Accessors(chain = true)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PullRequestLabel {
 
     @Id
@@ -23,15 +27,4 @@ public class PullRequestLabel {
     private String color;
 
     @ManyToOne private PullRequest pullRequest;
-
-    public PullRequestLabel(String name, String description, PullRequest pullRequest, String color) {
-        this.name = name;
-        this.description = description;
-        this.pullRequest = pullRequest;
-        this.color = color;
-    }
-
-    public PullRequestLabel() {
-
-    }
 }

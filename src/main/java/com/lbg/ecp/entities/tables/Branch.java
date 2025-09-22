@@ -10,13 +10,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.Accessors;
 
 @Entity
-@Getter
-@Setter
-@Table(name = "branches")
+@Data
+@Table(name = "commits")
+@Accessors(chain = true)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Branch {
 
   @Id
@@ -35,11 +38,4 @@ public class Branch {
   @JsonIgnore
   private Health health;
 
-  public Branch() {}
-
-  public Branch(Repository repository, String branchName, Health health) {
-    this.repository = repository;
-    this.branchName = branchName;
-    this.health = health;
-  }
 }

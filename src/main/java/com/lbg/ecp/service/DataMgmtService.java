@@ -40,7 +40,7 @@ public class DataMgmtService {
             pullRequestRepo.findById(componentId).ifPresentOrElse(
                     pullRequest -> {
                         pullRequestRepo.delete(pullRequest);
-                        githubApi.deletePullRequest(pullRequest.getRepository().getOwner(), pullRequest.getRepository().getName(), pullRequest.getNumber().toString());
+                        githubApi.deletePullRequest(pullRequest.getRepository().getOwner(), pullRequest.getRepository().getName(), pullRequest.getNumber());
                     }, () -> logger.error("PULL REQUEST NOT FOUND")
             );
         }

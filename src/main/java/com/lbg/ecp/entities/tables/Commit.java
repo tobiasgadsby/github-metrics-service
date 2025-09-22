@@ -10,15 +10,17 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.sql.Timestamp;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
+import lombok.*;
+import lombok.experimental.Accessors;
+
 @Entity
-@Setter
-@NoArgsConstructor
+@Data
 @Table(name = "Commits")
+@Accessors(chain = true)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Commit {
 
   @Id

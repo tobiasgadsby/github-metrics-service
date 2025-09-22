@@ -12,13 +12,17 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.util.List;
-import lombok.Getter;
-import lombok.Setter;
+
+import lombok.*;
+import lombok.experimental.Accessors;
 
 @Entity
-@Getter
-@Setter
+@Data
 @Table(name = "repositories")
+@Accessors(chain = true)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Repository {
 
   @Id
@@ -34,7 +38,7 @@ public class Repository {
   @Column(nullable = false)
   private String fullName;
 
-  @OneToOne(mappedBy = "repository")
+  @OneToOne(mappedBy = "repository", cascade = CascadeType.MERGE)
   @JsonIgnore
   private WatchedRepository watchedRepository;
 
@@ -44,16 +48,8 @@ public class Repository {
   @OneToMany(mappedBy = "repository")
   private List<Branch> branches;
 
-  @OneToOne(cascade = CascadeType.ALL)
+  @OneToOne(cascade = CascadeType.MERGE)
   @JoinColumn(name = "health_id")
   private Health health;
 
-  public Repository() {}
-
-  public Repository(String name, String owner, String fullName, Health health) {
-    this.name = name;
-    this.owner = owner;
-    this.fullName = fullName;
-    this.health = health;
-  }
 }

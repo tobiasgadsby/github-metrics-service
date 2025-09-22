@@ -1,33 +1,27 @@
 package com.lbg.ecp.entities.tables;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import lombok.Getter;
+import jakarta.persistence.*;
+import lombok.*;
+import lombok.experimental.Accessors;
+import org.hibernate.annotations.Cascade;
 
 @Entity
-@Getter
+@Data
 @Table(name = "watched_repositories")
+@Accessors(chain = true)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class WatchedRepository {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Integer id;
 
-  @ManyToOne private Tenant tenant;
+  @ManyToOne(cascade = CascadeType.MERGE)
+  private Tenant tenant;
 
-  @OneToOne private Repository repository;
+  @OneToOne(cascade = CascadeType.MERGE)
+  private Repository repository;
 
-  public WatchedRepository() {
-    // No Args constructor for Hibernate.
-  }
-
-  public WatchedRepository(Tenant tenant, Repository repository) {
-    this.tenant = tenant;
-    this.repository = repository;
-  }
 }

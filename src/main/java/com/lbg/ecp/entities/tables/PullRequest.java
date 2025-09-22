@@ -6,13 +6,16 @@ import jakarta.persistence.*;
 import java.sql.Timestamp;
 import java.util.List;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.Accessors;
 
 @Entity
-@Getter
-@Setter
+@Data
 @Table(name = "pull_requests")
+@Accessors(chain = true)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PullRequest {
 
   @Id
@@ -40,13 +43,4 @@ public class PullRequest {
   @OneToMany(mappedBy = "pullRequest", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<PullRequestLabel> pullRequestLabels;
 
-  public PullRequest() {}
-
-  public PullRequest(String url, Repository repository, String title, Timestamp createdAt, String number) {
-    this.url = url;
-    this.repository = repository;
-    this.title = title;
-    this.createdAt = createdAt;
-    this.number = number;
-  }
 }

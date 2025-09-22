@@ -62,7 +62,7 @@ public class HealthCheckService {
   //    )
   //  }
 
-  public com.lbg.ecp.entities.tables.Health getHealth(String branchName, GitCommit commit) {
+  public com.lbg.ecp.entities.tables.Health calculateHealth(String branchName, GitCommit commit) {
     ArrayList<com.lbg.ecp.entities.tables.Comment> comments = new ArrayList<>();
     calculateStaleness(branchName, commit).ifPresent(comments::add);
     com.lbg.ecp.entities.tables.Health health = new com.lbg.ecp.entities.tables.Health();
@@ -79,7 +79,7 @@ public class HealthCheckService {
     return health;
   }
 
-  public Health getHealth(PullRequest pullRequest) {
+  public Health calculateHealth(PullRequest pullRequest) {
     ArrayList<com.lbg.ecp.entities.tables.Comment> comments = new ArrayList<>();
     calculateStaleness(pullRequest).ifPresent(comments::add);
     com.lbg.ecp.entities.tables.Health health = new com.lbg.ecp.entities.tables.Health();
