@@ -26,6 +26,8 @@ public class RepositoryComponent {
 
   private List<Label> labels;
 
+  private String mergeableState;
+
   public RepositoryComponent() {
 
   }

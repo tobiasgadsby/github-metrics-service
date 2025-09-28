@@ -4,6 +4,7 @@ import com.lbg.ecp.api.GithubApi;
 import com.lbg.ecp.entities.api.Branch;
 import com.lbg.ecp.entities.api.PullRequest;
 import com.lbg.ecp.entities.tables.Repository;
+import com.lbg.ecp.entities.tables.TeamMember;
 import com.lbg.ecp.entities.tables.Tenant;
 import com.lbg.ecp.entities.tables.WatchedRepository;
 import com.lbg.ecp.repository.*;
@@ -34,6 +35,7 @@ public class StartupDataLoader implements ApplicationRunner {
     private final DataLoadService dataLoadService;
     private final CommentRepository commentRepository;
     private final BranchRepo branchRepo;
+    private final TeamMemberRepo teamMemberRepo;
 
     @Value("${env.tenant-code}")
     private String tenantCode;
@@ -54,7 +56,7 @@ public class StartupDataLoader implements ApplicationRunner {
             RepositoryRepo repositoryRepo,
             GithubApi githubApi,
             PullRequestRepo pullRequestRepo,
-            DataLoadService dataLoadService, CommentRepository commentRepository, BranchRepo branchRepo) {
+            DataLoadService dataLoadService, CommentRepository commentRepository, BranchRepo branchRepo, TeamMemberRepo teamMemberRepo) {
         this.watchedRepositoryRepo = watchedRepositoryRepo;
         this.tenantRepo = tenantRepo;
         this.repositoryRepo = repositoryRepo;
@@ -63,6 +65,7 @@ public class StartupDataLoader implements ApplicationRunner {
         this.dataLoadService = dataLoadService;
         this.commentRepository = commentRepository;
         this.branchRepo = branchRepo;
+        this.teamMemberRepo = teamMemberRepo;
     }
 
     @Override
@@ -80,6 +83,15 @@ public class StartupDataLoader implements ApplicationRunner {
                 tenantRepo
                         .findByTenantCode(tenantCode)
                         .orElseGet(() -> tenantRepo.save(new Tenant(tenantCode)));
+
+        //TODO Update to remove dummy data.
+        List<TeamMember> teamMembers = List.of(
+                TeamMember.builder().tenant(tenant).name("John").build(),
+                TeamMember.builder().tenant(tenant).name("Paul").build(),
+                TeamMember.builder().tenant(tenant).name("James").build(),
+                TeamMember.builder().tenant(tenant).name("Ringo").build()
+        );
+        teamMemberRepo.saveAll(teamMembers);
 
         // If addbyprefix option is selected, service will query for all repositories based on set
         // prefix.
@@ -119,7 +131,7 @@ public class StartupDataLoader implements ApplicationRunner {
                             ).toList()
                     );
 
-                    //
+
                     if (!watchedRepositoryRepo.existsByTenantAndRepository(tenant, updatedOrCreatedRepository)) {
                         // Mark as a watched repository by the current tenant.
                         watchedRepositoryRepo.save(

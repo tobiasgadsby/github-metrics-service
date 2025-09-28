@@ -20,7 +20,12 @@ public class PullRequest {
   @JsonProperty("created_at")
   private String createdAt;
 
+  @JsonProperty("mergeable_state")
+  private String mergeableState;
+
   private List<Label> labels;
+
+  private Integer comments;
 
   @Data
   @JsonIgnoreProperties

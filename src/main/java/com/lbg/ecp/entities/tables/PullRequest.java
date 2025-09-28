@@ -34,13 +34,19 @@ public class PullRequest {
   @Column(nullable = false)
   private String number;
 
+  @Column(nullable = false)
+  private String mergeableState;
+
   @ManyToOne() private Repository repository;
 
   @OneToOne(cascade = CascadeType.ALL)
   @JsonIgnore
   private Health health;
 
-  @OneToMany(mappedBy = "pullRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "pullRequest", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
   private List<PullRequestLabel> pullRequestLabels;
+
+  @ManyToOne()
+  private TeamMember teamMember;
 
 }

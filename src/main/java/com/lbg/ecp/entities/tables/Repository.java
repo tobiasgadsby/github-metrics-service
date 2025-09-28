@@ -48,7 +48,7 @@ public class Repository {
   @OneToMany(mappedBy = "repository")
   private List<Branch> branches;
 
-  @OneToOne(cascade = CascadeType.MERGE)
+  @OneToOne(cascade = {CascadeType.MERGE, CascadeType.ALL})
   @JoinColumn(name = "health_id")
   private Health health;
 

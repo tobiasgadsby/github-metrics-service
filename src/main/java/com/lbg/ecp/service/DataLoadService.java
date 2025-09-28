@@ -62,9 +62,10 @@ public class DataLoadService {
                 .orElseGet(
                         () ->
                                 repositoryRepo.save(Repository.builder()
-                                        .name(repository.getFullName())
+                                        .name(repository.getName())
                                         .owner(repository.getOwner().getLogin())
                                         .fullName(repository.getFullName())
+                                        .health(new Health(1.0))
                                         .build()));
     }
 
@@ -84,6 +85,9 @@ public class DataLoadService {
     }
 
     public com.lbg.ecp.entities.tables.PullRequest updatePullRequest(Repository repository, PullRequest pullRequest) {
+
+        PullRequest detailedPullRequest = githubApi.getPullRequest(repository.getOwner(), repository.getName(), pullRequest.getNumber());
+
         return pullRequestRepo.findPullRequestByUrl(pullRequest.getUrl()).map(
                 existingPullRequest -> {
 
@@ -107,6 +111,7 @@ public class DataLoadService {
                                             .build()
                             ).toList()
                     );
+                    existingPullRequest.setMergeableState(detailedPullRequest.getMergeableState());
 
                     //Save the updated pull request (and its related health, comment, and label entities)
                     pullRequestRepo.save(existingPullRequest);
@@ -120,6 +125,7 @@ public class DataLoadService {
                             .createdAt(new Timestamp(System.currentTimeMillis()))
                             .number(pullRequest.getNumber())
                             .repository(repository)
+                            .mergeableState(detailedPullRequest.getMergeableState())
                             .build();
 
                     //Create new health and add to repository.

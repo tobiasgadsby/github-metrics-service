@@ -3,6 +3,8 @@ package com.lbg.ecp.controller;
 import com.lbg.ecp.StartupDataLoader;
 import com.lbg.ecp.api.GithubApi;
 import com.lbg.ecp.entities.api.OpenPullRequestResponse;
+import com.lbg.ecp.entities.api.TeamMember;
+import com.lbg.ecp.entities.frontend.AssignTeamMemberToPullRequestRequest;
 import com.lbg.ecp.entities.frontend.RepositoryComponent;
 import com.lbg.ecp.entities.frontend.components.Comment;
 import com.lbg.ecp.entities.frontend.components.ComponentType;
@@ -14,6 +16,7 @@ import com.lbg.ecp.entities.tables.Repository;
 import com.lbg.ecp.repository.BranchRepo;
 import com.lbg.ecp.repository.PullRequestRepo;
 import com.lbg.ecp.repository.RepositoryRepo;
+import com.lbg.ecp.repository.TeamMemberRepo;
 import com.lbg.ecp.service.DataMgmtService;
 import com.lbg.ecp.service.HealthCheckService;
 
@@ -25,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @CrossOrigin(origins = "http://localhost:5173")
 @RestController
@@ -37,6 +41,7 @@ public class GithubMetricsController {
     private final DataMgmtService dataMgmtService;
     private final GithubApi githubApi;
     private final StartupDataLoader startupDataLoader;
+    private final TeamMemberRepo teamMemberRepo;
     private Logger logger = LogManager.getLogger(GithubMetricsController.class);
 
     public GithubMetricsController(
@@ -44,7 +49,7 @@ public class GithubMetricsController {
             RepositoryRepo repositoryRepo,
             HealthCheckService healthCheckService,
             PullRequestRepo pullRequestRepo,
-            DataMgmtService dataMgmtService, GithubApi githubApi, StartupDataLoader startupDataLoader) {
+            DataMgmtService dataMgmtService, GithubApi githubApi, StartupDataLoader startupDataLoader, TeamMemberRepo teamMemberRepo) {
         this.branchRepo = branchRepo;
         this.repositoryRepo = repositoryRepo;
         this.healthCheckService = healthCheckService;
@@ -52,6 +57,7 @@ public class GithubMetricsController {
         this.dataMgmtService = dataMgmtService;
         this.githubApi = githubApi;
         this.startupDataLoader = startupDataLoader;
+        this.teamMemberRepo = teamMemberRepo;
     }
 
     @GetMapping("/getBranches")
@@ -105,6 +111,13 @@ public class GithubMetricsController {
         return buildPullRequests(pullRequests);
     }
 
+    @PostMapping("/assignTeamMemberToPullRequest")
+    public void assignTeamMemberToPullRequest(@RequestBody AssignTeamMemberToPullRequestRequest assignTeamMemberToPullRequestRequest) {
+        PullRequest pullRequest = pullRequestRepo.getReferenceById(assignTeamMemberToPullRequestRequest.getPullRequestId());
+        pullRequest.setTeamMember(teamMemberRepo.getReferenceById(assignTeamMemberToPullRequestRequest.getTeamMemberId()));
+        pullRequestRepo.save(pullRequest);
+    }
+
     private List<RepositoryComponent> buildPullRequests(
             List<PullRequest> pullRequests
     ) {
@@ -134,7 +147,8 @@ public class GithubMetricsController {
                                                                 .setColor(label.getColor())
                                                 )
                                                         .toList()
-                                        ))
+                                        )
+                                        .setMergeableState(pullRequest.getMergeableState()))
                 .toList();
     }
 
@@ -176,5 +190,17 @@ public class GithubMetricsController {
     @PostMapping("/executeFullRefresh")
     public void executeFullRefresh() {
         startupDataLoader.executeFullRefresh();
+    }
+
+    @GetMapping("/getAllTeamMembers")
+    public List<TeamMember> getAllTeamMembers(
+            @RequestParam String tenantCode
+    ) {
+        return teamMemberRepo.findByTenant_TenantCode(tenantCode).stream().map(
+                teamMember -> com.lbg.ecp.entities.api.TeamMember.builder()
+                        .id(teamMember.getId())
+                        .name(teamMember.getName())
+                        .build()
+        ).toList();
     }
 }
